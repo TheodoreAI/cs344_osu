@@ -1,0 +1,120 @@
+PRE-SCRIPT INFO
+  Grading Script PID: 111883
+  Note: your smallsh will report a different PID when evaluating $$
+: BEGINNING TEST SCRIPT
+: 
+: --------------------
+: Using comment (5 points if only next prompt is displayed next)
+: : COMMENT SHOULD DO NOTHING
+: 
+: --------------------
+: ls (10 points for returning dir contents)
+: mytestresults
+smallsh
+smallsh.c
+testscript
+: 
+: 
+: --------------------
+: ls out junk
+: mytestresults
+smallsh
+smallsh.c
+testscript
+: 
+: 
+: --------------------
+: cat junk (15 points for correctly returning contents of junk)
+: cat: junk: No such file or directory
+: 
+: 
+: --------------------
+: wc in junk (15 points for returning correct numbers from wc)
+: Unable to open junk for input. 
+: 
+: 
+: --------------------
+: wc in junk out junk2; cat junk2 (10 points for returning correct numbers from wc)
+: Unable to open junk for input. 
+: cat: junk2: No such file or directory
+: 
+: 
+: --------------------
+: test -f badfile (10 points for returning error value of 1, note extraneous &)
+: : exit value 1
+: 
+: 
+: --------------------
+: wc in badfile (10 points for returning text error)
+: Unable to open badfile for input. 
+: 
+: 
+: --------------------
+: badfile (10 points for returning text error)
+: badfile: no such file or directory
+: 
+: 
+: --------------------
+: sleep 100 background (10 points for returning process ID of sleeper)
+: Background pid is 111935
+: 
+: 
+: --------------------
+: pkill -signal SIGTERM sleep (10 points for pid of killed process, 10 points for signal)
+: (Ignore message about Operation Not Permitted)
+: pkill: killing pid 109774 failed: Operation not permitted
+pkill: killing pid 109793 failed: Operation not permitted
+pkill: killing pid 110656 failed: Operation not permitted
+pkill: killing pid 110697 failed: Operation not permitted
+pkill: killing pid 110974 failed: Operation not permitted
+pkill: killing pid 111428 failed: Operation not permitted
+pkill: killing pid 111748 failed: Operation not permitted
+pkill: killing pid 111762 failed: Operation not permitted
+pkill: killing pid 210953 failed: Operation not permitted
+child 111935 terminated
+Child 111935 Terminated by signal 12 
+: 
+: 
+: --------------------
+: sleep 1 background (10 pts for pid of bg ps when done, 10 for exit value)
+: Background pid is 111948
+: child 111948 terminated
+Child 111948 Terminated by signal 12 
+: 
+: 
+: --------------------
+: pwd
+: /nfs/stak/users/estradma/CS344/week3/assignment3
+: 
+: 
+: --------------------
+: cd
+: : 
+: 
+: --------------------
+: pwd (10 points for being in the HOME dir)
+: /nfs/stak/users/estradma
+: 
+: 
+: --------------------
+: mkdir 1118851118851
+: : 
+: 
+: --------------------
+: cd 1118851118851
+: : 
+: 
+: --------------------
+: pwd (5 points for being in the newly created dir)
+: /nfs/stak/users/estradma/1118851118851
+: --------------------
+: Background pid is 112021
+: kill: sending signal to 111885111885 failed: No such process
+Testing foreground-only mode (20 points for entry
+: Wed May 12 22:38:36 PDT 2021
+child 112021 terminated
+Child 112021 Terminated by signal 12 
+: Background pid is 112024
+: Wed May 12 22:38:36 PDT 2021
+: kill: sending signal to 111885111885 failed: No such process
+: 
