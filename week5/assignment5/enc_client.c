@@ -67,8 +67,6 @@ int sendMessageLength(int socketFD, char *message, char *buffer, int plaintextLe
 
   int charsWritten, charsRead;
   char strLength[BUFFERSIZE];
-
-  message[strcspn(message, "\0")] = '\n'; 
   sprintf(strLength, "%d", plaintextLength);
   charsWritten = send(socketFD, strLength, strlen(strLength), 0);
 
@@ -144,19 +142,14 @@ int sendKeyLength(int socketFD, char*key, char*buffer, int keySize){
 
   int charsWritten, charsRead;
   char keyLength[BUFFERSIZE]; // turn an int into a char to send
-  key[strcspn(key, "\0")] = '\n'; // removing the newline from the key input
   sprintf(keyLength, "%d", keySize);
-
   charsWritten = send(socketFD, keyLength, strlen(keyLength), 0); // Send keylength
-
   if (charsWritten < 0){
     fprintf(stderr, "enc_client: Error writing to socket\n");
   }
-
   if (charsWritten < strlen(key)){
     fprintf(stderr, "Warning: not all plaintext file content passed to server. \n");
   }
-
     // clear array again for resure
   memset(buffer, '\0', BUFFERSIZE);
     charsRead = recv(socketFD, buffer, BUFFERSIZE, 0);
@@ -318,8 +311,6 @@ int main(int argc, char*argv[]){
     }
   }
 
-
-  printf("here");
   sendMessageLength(socketFD, message, buffer, plaintextLength);
   sendMessage(socketFD, message, buffer);
   sendKeyLength(socketFD, key, buffer, keySize);
