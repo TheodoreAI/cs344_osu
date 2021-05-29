@@ -31,9 +31,10 @@
 
 int getMessageLength(int connectionSocket, char *buffer);
 int getKeyLength(int connectionSocket, char *buffer);
-char getMessageClient(int connectionSocket, char*message, char*buffer, int messageLength);
+void getMessageClient(int connectionSocket, char*message, char*buffer, int messageLength, char **arr, size_t *arr_len); // get message back
 int getKeyClient(int connectionSocket, char*key, char*buffer, int keyLengthRecieved);
 void printValues(int value);
+void printMessage(char *arr, size_t arr_len);
 
 // Error function used for reporting issues
 void error(const char* msg){
@@ -56,6 +57,14 @@ void printValues(int value){
     printf("[%d]", value);
 }
 
+
+void printMessage(char *arr, size_t arr_len){
+
+    for(int i = 0; i< arr_len; i++){
+        printf("%c", arr[i]);
+    }
+    
+}
 // This function will set up the address struct for the server socket
 void setupAddressStruct(struct sockaddr_in* address, int portNumber){
 
@@ -97,10 +106,10 @@ int getMessageLength(int connectionSocket, char *buffer){
 }
 
 
-
-char getMessageClient(int connectionSocket, char*message, char*buffer, int messageLength){
+void getMessageClient(int connectionSocket, char*message, char*buffer, int messageLength, char **arr, size_t *arr_len){
     // Get the message from the client.
     int charsRead, charsSend;
+
     memset(buffer, '\0', BUFFERSIZE);
     charsRead = recv(connectionSocket, buffer, BUFFERSIZE, 0);
 
@@ -111,20 +120,23 @@ char getMessageClient(int connectionSocket, char*message, char*buffer, int messa
     // Saving the message to the message array.
     strcat(message, buffer);
     messageLength -= strlen(buffer);
-
+    int val = 0;
     while(messageLength != 0){
-        if(strlen(buffer)){
+        if(strlen(buffer) == 0){
+            
             break;
-        }
-        memset(buffer, '\0', BUFFERSIZE);
-        charsRead = recv(connectionSocket, buffer, BUFFERSIZE, 0);
+        }else{
 
-        if(charsRead < 0){
-            fprintf(stderr, "Error reading from the socket");
+            memset(buffer, '\0', BUFFERSIZE);
+            charsRead = recv(connectionSocket, buffer, BUFFERSIZE, 0);
+
+            if(charsRead < 0){
+                fprintf(stderr, "Error reading from the socket");
             }
-
-        messageLength -= strlen(buffer);
-        strcat(message, buffer);
+            messageLength -= strlen(buffer);
+            strcat(message, buffer);
+            val++;
+        }
     }
     // Once all the message has been read:
     char recievedAllMessage[22] = "I got all the message";
@@ -134,12 +146,17 @@ char getMessageClient(int connectionSocket, char*message, char*buffer, int messa
     if(charsRead < 0){
         fprintf(stderr, "enc_server: Error sending to socket.\n");
     }
-    printf("[%s]", message);
-    return message;
+    char *messagePtr = malloc(sizeof(char)*BUFFERSIZE);
+    // printf("message: [%d]\n", strlen(message));
+    strncpy(messagePtr, message, strlen(message));
+    // Making a pointer to return it
+    
+    *arr = messagePtr;
+    *arr_len = strlen(message);
    
 }
 
-
+// continue here!!!
 
 
 int getKeyLength(int connectionSocket, char *buffer){
@@ -208,8 +225,13 @@ int main(int argc, char *argv[]){
     char buffer[BUFFERSIZE] = "";
     char message[BUFFERSIZE] = "";
     char key[BUFFERSIZE] = "";
-    char messageRecieved[BUFFERSIZE] = "";
     int connectionSocket, charsRead;
+
+    // Pointers for char arrays
+    char *arr;
+    size_t arr_len;
+
+
     // I'm going to have to figure out how this will change size depending on the size 
     // of the chars in the key and plaintext file.
     struct sockaddr_in serverAddress, clientAddress;
@@ -257,9 +279,7 @@ int main(int argc, char *argv[]){
     this exists until the server process ends.
     Allow up to 5 connections to queue up. (different than the concurrent socket connections running processes).
     */
-
     listen(listenSocket, 5);
-
      /*
     STEP 5: Loop and accept connections on the listneing socket by calling accept().
     Create a new connected socket as the endpoint fo the connection between enc_client and enc_server.
@@ -287,12 +307,16 @@ int main(int argc, char *argv[]){
     if (ch == 0){
 
         int messageLength = getMessageLength(connectionSocket, buffer);
-        messageRecieved = getMessageClient(connectionSocket, message, buffer, messageLength);
+        getMessageClient(connectionSocket, message, buffer, messageLength, &arr, &arr_len);
         int keyLength = getKeyLength(connectionSocket, buffer);
         int keyRecieved = getKeyClient(connectionSocket, key, buffer, keyLength);
         printf("MessageLength: [%d]\n", messageLength);
         printf("KeyLength: [%d]\n", keyLength);
+        // printMessage(arr, arr_len);
+        printf("[%s]\n", arr);
+        printf("[%d]\n", arr_len);
         close(connectionSocket);
+        free(arr);
         exit(0);
     }
     close(connectionSocket);
