@@ -31,7 +31,7 @@
 
 int getMessageLength(int connectionSocket, char *buffer);
 int getKeyLength(int connectionSocket, char *buffer);
-int getMessageClient(int connectionSocket, char*message, char*buffer, int messageLength);
+char getMessageClient(int connectionSocket, char*message, char*buffer, int messageLength);
 int getKeyClient(int connectionSocket, char*key, char*buffer, int keyLengthRecieved);
 void printValues(int value);
 
@@ -98,10 +98,9 @@ int getMessageLength(int connectionSocket, char *buffer){
 
 
 
-int getMessageClient(int connectionSocket, char*message, char*buffer, int messageLength){
+char getMessageClient(int connectionSocket, char*message, char*buffer, int messageLength){
     // Get the message from the client.
     int charsRead, charsSend;
-
     memset(buffer, '\0', BUFFERSIZE);
     charsRead = recv(connectionSocket, buffer, BUFFERSIZE, 0);
 
@@ -135,8 +134,8 @@ int getMessageClient(int connectionSocket, char*message, char*buffer, int messag
     if(charsRead < 0){
         fprintf(stderr, "enc_server: Error sending to socket.\n");
     }
-
-    return 0;
+    printf("[%s]", message);
+    return message;
    
 }
 
@@ -209,7 +208,7 @@ int main(int argc, char *argv[]){
     char buffer[BUFFERSIZE] = "";
     char message[BUFFERSIZE] = "";
     char key[BUFFERSIZE] = "";
-
+    char messageRecieved[BUFFERSIZE] = "";
     int connectionSocket, charsRead;
     // I'm going to have to figure out how this will change size depending on the size 
     // of the chars in the key and plaintext file.
@@ -288,7 +287,7 @@ int main(int argc, char *argv[]){
     if (ch == 0){
 
         int messageLength = getMessageLength(connectionSocket, buffer);
-        int messageRecieved = getMessageClient(connectionSocket, message, buffer, messageLength);
+        messageRecieved = getMessageClient(connectionSocket, message, buffer, messageLength);
         int keyLength = getKeyLength(connectionSocket, buffer);
         int keyRecieved = getKeyClient(connectionSocket, key, buffer, keyLength);
         printf("MessageLength: [%d]\n", messageLength);
