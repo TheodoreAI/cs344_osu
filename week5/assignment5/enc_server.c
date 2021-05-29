@@ -29,10 +29,10 @@
 #define BUFFERSIZE (int)100000
 // Function Prototypes:
 
-int getMessageLengthClient(int connectionSocket);
-int getKeyLength(int connectionSocket);
-int getMessageClient(int connectionSocket, int messageLength);
-int getKeyClient(int connectionSocket);
+int getMessageLength(int connectionSocket, char *buffer);
+int getKeyLength(int connectionSocket, char *buffer);
+int getMessageClient(int connectionSocket, char*message, char*buffer, int messageLength);
+int getKeyClient(int connectionSocket, char*key, char*buffer, int keyLengthRecieved);
 void printValues(int value);
 
 // Error function used for reporting issues
@@ -72,98 +72,148 @@ void setupAddressStruct(struct sockaddr_in* address, int portNumber){
 }
 
 
-int getMessageLengthClient(int connectionSocket){
-    // copying the character '\0' on the buffer
-    // Read the client message
+int getMessageLength(int connectionSocket, char *buffer){
+    // Get the length of the message from the client
+    // 
 
     int charsRead, charsSend;
     int messageLength;
-    char buffer[BUFFERSIZE] = "";
 
-
+    // Recover the length of the incoming message
     memset(buffer, '\0', BUFFERSIZE);
     charsRead = recv(connectionSocket, buffer, sizeof(buffer) - 1, 0);
-
-    
     if (charsRead < 0){
         fprintf(stderr, "Error reading from the socket.");
     }
-
-
     messageLength = atoi(buffer);
-    printf("Message: %s", buffer);
-    printf("[%d]", messageLength);
-
+    // say that you got the length of the message
     charsSend = send(connectionSocket, "Connected to enc_server!", 24, 0);
-
     if(charsSend< 0){
         fprintf(stderr, "Error writing to the socket\n");
     }
    
-
-    
     return messageLength;
 
 }
 
 
-// int getKeyLength(int connectionSocket, char *buffer){
-//     // Get the length of the key
-//     int charsRead, charsSend, lengthKey;
-//     memset(buffer, '\0', BUFFERSIZE);
-//     charsRead = recv(connectionSocket, buffer, BUFFERSIZE, 0);
 
-//     if(charsRead < 0){
-//         fprintf(stderr, "Error reading from socket.");
+int getMessageClient(int connectionSocket, char*message, char*buffer, int messageLength){
+    // Get the message from the client.
+    int charsRead, charsSend;
 
-//     }
+    memset(buffer, '\0', BUFFERSIZE);
+    charsRead = recv(connectionSocket, buffer, BUFFERSIZE, 0);
 
-//     lengthKey = atoi(buffer);
-//     charsSend = send(connectionSocket, "Im enc_server and I got your key length", 39, 0 );
+    if(charsRead < 0){
+        fprintf(stderr, "Error reading from the socket");
+    }
 
-//     if(charsSend< 0){
-//         fprintf(stderr, "Error writing to socket");
-//     }
-//     return lengthKey;
+    // Saving the message to the message array.
+    strcat(message, buffer);
+    messageLength -= strlen(buffer);
 
-// }
+    while(messageLength != 0){
+        if(strlen(buffer)){
+            break;
+        }
+        memset(buffer, '\0', BUFFERSIZE);
+        charsRead = recv(connectionSocket, buffer, BUFFERSIZE, 0);
+
+        if(charsRead < 0){
+            fprintf(stderr, "Error reading from the socket");
+            }
+
+        messageLength -= strlen(buffer);
+        strcat(message, buffer);
+    }
+    // Once all the message has been read:
+    char recievedAllMessage[22] = "I got all the message";
+    charsRead = send(connectionSocket, recievedAllMessage, strlen(recievedAllMessage), 0);
 
 
-// int getMessageClient(int connectionSocket, int messageLength){
-//     // Get the message from the client.
-//     int charsRead, charsSend;
+    if(charsRead < 0){
+        fprintf(stderr, "enc_server: Error sending to socket.\n");
+    }
 
-//     memset(buffer, '\0', BUFFERSIZE);
-//     charsRead = recv(connectionSocket, buffer, BUFFERSIZE, 0);
-
-//     if(charsRead < 0){
-//         fprintf(stderr, "Error reading from the socket");
-//     }
-
-//     // Saving the message to the message array.
-//     strcat(message, buffer);
-//     messageLength -= strlen(buffer);
-
-//     for(int i = 0; i < strlen(buffer); i++){
-//         printf("%s does it get here?", message[i]);
-//     }
-
-//     return 0;
+    return 0;
    
-// }
+}
+
+
+
+
+int getKeyLength(int connectionSocket, char *buffer){
+    // Get the length of the key
+    int charsRead, charsSend, lengthKey;
+    memset(buffer, '\0', BUFFERSIZE);
+    charsRead = recv(connectionSocket, buffer, BUFFERSIZE, 0);
+
+    if(charsRead < 0){
+        fprintf(stderr, "Error reading from socket.");
+
+    }
+
+    lengthKey = atoi(buffer);
+    charsSend = send(connectionSocket, "Im enc_server and I got your key length", 39, 0 );
+
+    if(charsSend< 0){
+        fprintf(stderr, "Error writing to socket");
+    }
+    return lengthKey;
+
+}
+
+int getKeyClient(int connectionSocket, char*key, char*buffer, int keyLengthRecieved){
+     // Get the message from the client.
+    int charsRead, charsSend;
+
+    memset(buffer, '\0', BUFFERSIZE);
+    charsRead = recv(connectionSocket, buffer, BUFFERSIZE, 0);
+
+    if(charsRead < 0){
+        fprintf(stderr, "Error reading from the socket");
+    }
+
+    // Saving the message to the message array.
+    strcat(key, buffer);
+    keyLengthRecieved -= strlen(buffer);
+
+    while(keyLengthRecieved != 0){
+        if(strlen(buffer)){
+            break;
+        }
+        memset(buffer, '\0', BUFFERSIZE);
+        charsRead = recv(connectionSocket, buffer, BUFFERSIZE, 0);
+
+        if(charsRead < 0){
+            fprintf(stderr, "Error reading from the socket");
+            }
+
+        keyLengthRecieved -= strlen(buffer);
+        strcat(key, buffer);
+    }
+    // Once all the message has been read:
+    char recievedAllKey[22] = "I got all the key";
+    charsRead = send(connectionSocket, recievedAllKey, strlen(recievedAllKey), 0);
+    if(charsRead < 0){
+        fprintf(stderr, "enc_server: Error sending to socket.\n");
+    }
+
+    return 0;
+}
+
 
 int main(int argc, char *argv[]){
     int ch = 0;
-    // char buffer[BUFFERSIZE] = "";
-    // char message[BUFFERSIZE] = "";
+    char buffer[BUFFERSIZE] = "";
+    char message[BUFFERSIZE] = "";
+    char key[BUFFERSIZE] = "";
 
     int connectionSocket, charsRead;
     // I'm going to have to figure out how this will change size depending on the size 
     // of the chars in the key and plaintext file.
-  
-
     struct sockaddr_in serverAddress, clientAddress;
-
     socklen_t sizeOfClientInfo = sizeof(clientAddress);
 
     // check usage & args
@@ -174,10 +224,8 @@ int main(int argc, char *argv[]){
     }
 
     /*
-
     Create the socket that will listen for connections.
     STEP 1: create the socket endpoint for enc_server.
-
     */
 
     int listenSocket = socket(AF_INET, SOCK_STREAM, 0);
@@ -186,9 +234,7 @@ int main(int argc, char *argv[]){
         exit(1);
     }
 
-
     /*
-
     Set up the address struct for the server socket:
     STEP 2: calls this function to set up a socket address structure
     sockaddr_in with the port number at which the server socket will listen for connections.
@@ -198,28 +244,22 @@ int main(int argc, char *argv[]){
 
     setupAddressStruct(&serverAddress, atoi(argv[1]));
 
-
     /*
-
     Associate the socket to the port (binding the socket to the port)
     STEP 3: call bind() to associate the socket with the socket address.
-    
     */
     if (bind(listenSocket, (struct sockaddr *)&serverAddress, sizeof(serverAddress)) < 0){
         fprintf(stderr, "Error on binding the port to the socket!");
         exit(1);
     }
 
-
     /*
-
     STEP 4: call listen() on the socket to start listening for client connections, 
     this exists until the server process ends.
     Allow up to 5 connections to queue up. (different than the concurrent socket connections running processes).
-
     */
-    listen(listenSocket, 5);
 
+    listen(listenSocket, 5);
 
      /*
     STEP 5: Loop and accept connections on the listneing socket by calling accept().
@@ -247,16 +287,16 @@ int main(int argc, char *argv[]){
 
     if (ch == 0){
 
-        int messageLength = getMessageLengthClient(connectionSocket);
-        // int messageRecieved = getMessageClient(connectionSocket, messageLength);
-        
+        int messageLength = getMessageLength(connectionSocket, buffer);
+        int messageRecieved = getMessageClient(connectionSocket, message, buffer, messageLength);
+        int keyLength = getKeyLength(connectionSocket, buffer);
+        int keyRecieved = getKeyClient(connectionSocket, key, buffer, keyLength);
+        printf("MessageLength: [%d]\n", messageLength);
+        printf("KeyLength: [%d]\n", keyLength);
         close(connectionSocket);
         exit(0);
     }
     close(connectionSocket);
-
-
-      
     }
 
     return 0;

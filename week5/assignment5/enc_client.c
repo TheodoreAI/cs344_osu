@@ -10,8 +10,11 @@
 #define BUFFERSIZE (int)100000
 
 // Function prototypes
-// void setupAddressStruct(struct sockaddr_in *address, int portNumber);
-
+void setupAddressStruct(struct sockaddr_in *address, int portNumber);
+int sendMessageLength(int socketFD, char *message, char *buffer, int plaintextLength);
+int sendMessage(int socketFD, char *message, char* buffer);
+int sendKeyLength(int socketFD, char *key, char*buffer, int keySize);
+int sendKey(int socketFD, char*key, char*buffer);
 
 // CAPS Alphabet and space to use to review the plaintext file and the key for invalid character.
 static const char alph[27] = "ABCDEFGHIJKLMNOPQRSTUVWXYZ ";
@@ -52,11 +55,150 @@ void setupAddressStruct(struct sockaddr_in *address, int portNumber){
   memcpy((char*) &address->sin_addr.s_addr, 
                   hostInfo->h_addr_list[0], 
                   hostInfo->h_length);
+}
 
+
+int sendMessageLength(int socketFD, char *message, char *buffer, int plaintextLength){
+   /*
+                      SEND MESSAGE LENGTH:
+    STEP 4:  I am going to send the message length to use it to make sure how much to iterate.
+    And also recv() message from the server.
+  */
+
+  int charsWritten, charsRead;
+  char strLength[BUFFERSIZE];
+
+  message[strcspn(message, "\0")] = '\n'; 
+  sprintf(strLength, "%d", plaintextLength);
+  charsWritten = send(socketFD, strLength, strlen(strLength), 0);
+
+  if (charsWritten < strlen(strLength)){
+    fprintf(stderr, "enc_client: Error writing to socket\n");
+  }
+
+  if (charsWritten < strlen(message)){
+    fprintf(stderr, "Warning: not all plaintext file content passed to server. \n");
+  }
+
+  // Get return message from server
+  // clear array again for resure
+  memset(buffer, '\0', BUFFERSIZE);
+   /*
+    The client recieves data from the server socket through the recv() function.
+    Data may arrive in odd size bundles, we may need to call the recv() function multiple times
+    to read the complete message sent on the socket.
+    If the size of the message is unknown or varies, special characters can be designated to mark termination of the message.
+  */
+  charsRead = recv(socketFD, buffer, BUFFERSIZE, 0);
+  if(charsRead < 0 ){
+    fprintf(stderr, "enc_client: ERROR reading from socket length\n");
+  }
+  printf("CLIENT: I received this from the server: \"%s\"\n", buffer);
+  return 0;
 
 }
 
 
+int sendMessage(int socketFD, char *message, char *buffer){
+  /*
+                      SEND MESSAGE
+    STEP 4:  I am going to send the message with the \n character to use it as a stoppage point on the server.
+    And also recv() message from the server.
+  */
+  int charsWritten, charsRead;
+  charsWritten = send(socketFD, message, strlen(message), 0);
+
+  if (charsWritten < 0){
+    fprintf(stderr, "enc_client: Error writing to socket\n");
+  }
+
+  if (charsWritten < strlen(message)){
+    fprintf(stderr, "Warning: not all plaintext file content passed to server. \n");
+  }
+
+  // Get return message from server
+  // clear array again for resure
+  memset(buffer, '\0', BUFFERSIZE);
+   /*
+    The client recieves data from the server socket through the recv() function.
+    Data may arrive in odd size bundles, we may need to call the recv() function multiple times
+    to read the complete message sent on the socket.
+    If the size of the message is unknown or varies, special characters can be designated to mark termination of the message.
+  */
+  charsRead = recv(socketFD, buffer, BUFFERSIZE, 0);
+  if(charsRead < 0 ){
+    fprintf(stderr, "enc_client: ERROR reading from socket msg\n");
+  }
+  printf("CLIENT: I received this from the server: \"%s\"\n", buffer);
+  return 0;
+}
+
+
+
+int sendKeyLength(int socketFD, char*key, char*buffer, int keySize){
+   /*
+                      SEND KEY LENGTH
+    STEP 4:  I am going to send the message with the \n character to use it as a stoppage point on the server.
+    And also recv() message from the server.
+  */
+
+  int charsWritten, charsRead;
+  char keyLength[BUFFERSIZE]; // turn an int into a char to send
+  key[strcspn(key, "\0")] = '\n'; // removing the newline from the key input
+  sprintf(keyLength, "%d", keySize);
+
+  charsWritten = send(socketFD, keyLength, strlen(keyLength), 0); // Send keylength
+
+  if (charsWritten < 0){
+    fprintf(stderr, "enc_client: Error writing to socket\n");
+  }
+
+  if (charsWritten < strlen(key)){
+    fprintf(stderr, "Warning: not all plaintext file content passed to server. \n");
+  }
+
+    // clear array again for resure
+  memset(buffer, '\0', BUFFERSIZE);
+    charsRead = recv(socketFD, buffer, BUFFERSIZE, 0);
+
+  if(charsRead < 0 ){
+    fprintf(stderr, "enc_client: ERROR reading from socket\n");
+  }
+}
+
+
+int sendKey(int socketFD, char*key, char*buffer){
+   /*
+                      SEND KEY
+    STEP 4:  I am going to send the key.
+  */
+  int charsWritten, charsRead;
+  charsWritten = send(socketFD, key, strlen(key), 0);
+
+  if (charsWritten < 0){
+    fprintf(stderr, "enc_client: Error writing to socket\n");
+  }
+
+  if (charsWritten < strlen(key)){
+    fprintf(stderr, "Warning: not all plaintext file content passed to server. \n");
+  }
+
+  // Get return message from server
+  // clear array again for resure
+  memset(buffer, '\0', BUFFERSIZE);
+   /*
+    The client recieves data from the server socket through the recv() function.
+    Data may arrive in odd size bundles, we may need to call the recv() function multiple times
+    to read the complete message sent on the socket.
+    If the size of the message is unknown or varies, special characters can be designated to mark termination of the message.
+  */
+  charsRead = recv(socketFD, buffer, BUFFERSIZE, 0);
+  if(charsRead < 0 ){
+    fprintf(stderr, "enc_client: ERROR reading from socket msg\n");
+  }
+  printf("CLIENT: I received this from the server: \"%s\"\n", buffer);
+  return 0;
+}
 
 
 int main(int argc, char*argv[]){
@@ -137,12 +279,12 @@ int main(int argc, char*argv[]){
   key[strcspn(key, "\n")] = '\0'; // remove the newline char
   // Checking that the key is not shorter than the plaintext file.
 
-  int filenameSize = strlen(message);
-  int keyfileSize = strlen(key);
+  int plaintextLength = strlen(message);
+  int keySize = strlen(key);
 
   // Key and message review 1: making sure that the key is as long or longer than message.
-  if(keyfileSize < filenameSize){
-    fprintf(stderr, "ERROR: key is shorter than the plaintext.\n key: [%d] \n plaintext: [%d]\n", keyfileSize, filenameSize);
+  if(keySize < plaintextLength){
+    fprintf(stderr, "ERROR: key is shorter than the plaintext.\n key: [%d] \n plaintext: [%d]\n", keySize, plaintextLength);
     exit(1);
   } 
 
@@ -151,7 +293,7 @@ int main(int argc, char*argv[]){
      Valid characters only.
   */
 
-  for (int i = 0;  i< filenameSize; i++){
+  for (int i = 0;  i< plaintextLength; i++){
     for(int j = 0; j < 28; j++){
       if (j == 27){
         fprintf(stderr, "Error: plaintext file has an invalid character.\n");
@@ -164,8 +306,7 @@ int main(int argc, char*argv[]){
   }
  
   // Same thing for key
-
-  for (int i = 0;  i< keyfileSize; i++){
+  for (int i = 0;  i< keySize; i++){
     for(int j = 0; j < 28; j++){
       if (j == 27){
         fprintf(stderr, "Error: key file has an invalid character.\n");
@@ -177,38 +318,12 @@ int main(int argc, char*argv[]){
     }
   }
 
-  /*
-    STEP 4:  I am going to send the message with the \n character to use it as a stoppage point on the server.
-    And also recv() message from the server.
-  */
-  charsWritten = send(socketFD, message, strlen(message), 0);
 
-  if (charsWritten < 0){
-    fprintf(stderr, "enc_client: Error writing to socket\n");
-  }
-
-  if (charsWritten < strlen(message)){
-    fprintf(stderr, "Warning: not all plaintext file content passed to server. \n");
-  }
-
-  // Get return message from server
-  // clear array again for resure
-  memset(buffer, '\0', BUFFERSIZE);
-   /*
-    The client recieves data from the server socket through the recv() function.
-    Data may arrive in odd size bundles, we may need to call the recv() function multiple times
-    to read the complete message sent on the socket.
-
-    If the size of the message is unknown or varies, special characters can be designated to mark termination of the message.
-    
-  */
-  charsRead = recv(socketFD, buffer, BUFFERSIZE, 0);
-
-  if(charsRead < 0 ){
-    fprintf(stderr, "enc_client: ERROR reading from socket\n");
-  }
-
-  printf("CLIENT: I received this from the server: \"%s\"\n", buffer);
+  printf("here");
+  sendMessageLength(socketFD, message, buffer, plaintextLength);
+  sendMessage(socketFD, message, buffer);
+  sendKeyLength(socketFD, key, buffer, keySize);
+  sendKey(socketFD, key, buffer);
   close(socketFD);
 
 
