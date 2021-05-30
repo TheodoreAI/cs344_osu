@@ -11,6 +11,7 @@
 
 // Function prototypes
 void setupAddressStruct(struct sockaddr_in *address, int portNumber);
+void establishDecServerConnection(int socketFD);
 int sendMessageLength(int socketFD, char *message, char *buffer, int plaintextLength);
 int sendMessage(int socketFD, char *message, char* buffer);
 int sendKeyLength(int socketFD, char *key, char*buffer, int keySize);
@@ -57,6 +58,24 @@ void setupAddressStruct(struct sockaddr_in *address, int portNumber){
                   hostInfo->h_addr_list[0], 
                   hostInfo->h_length);
 }
+
+
+
+void establishDecServerConnection(int socketFD){
+  int charsWritten, charsRead;
+  char buffer[BUFFERSIZE]= "";
+  char encserver[10]= "ENC_SERVER";
+  charsWritten = send(socketFD, encserver, strlen(encserver), 0);
+  // if (charsWritten < 0){
+  //   fprintf(stderr, "Error writing to socket connection");
+  // }
+  // charsRead = recv(socketFD, buffer, BUFFERSIZE, 0);
+  // if(charsRead < 0 ){
+  //   fprintf(stderr, "enc_client: ERROR reading from socket length\n");
+  // }
+
+}
+
 
 
 int sendMessageLength(int socketFD, char *message, char *buffer, int plaintextLength){
@@ -256,7 +275,6 @@ int main(int argc, char*argv[]){
 
 
   // Check the usage & arguments
-
   if(argc < 3){
     fprintf(stderr, "USAGE: %s filename key port", argv[0]);
     exit(0);
@@ -265,9 +283,7 @@ int main(int argc, char*argv[]){
   /*
     Create a socket: STEP 1: creates the socket endpoint for the client by calling this function.
   */
-
   socketFD = socket(AF_INET, SOCK_STREAM, 0);
- 
   if(socketFD < 0){
     fprintf(stderr, "enc_client: ERROR opening socket!\n");
   }
@@ -280,7 +296,6 @@ int main(int argc, char*argv[]){
     argv[3] -> portNumber;
     optional -> filename output (stdout)
   */
-  
   setupAddressStruct(&serverAddress, atoi(argv[3]));
 
 /*
@@ -290,7 +305,6 @@ int main(int argc, char*argv[]){
     serverAddress:
     sizeof(serverAddress):
 */
-
   if(connect(socketFD, (struct sockaddr*)&serverAddress, sizeof(serverAddress)) < 0){
     fprintf(stderr, "enc_client: Error connecting\n");
   }
@@ -359,7 +373,8 @@ int main(int argc, char*argv[]){
       }
     }
   }
-
+ 
+  establishDecServerConnection(socketFD);
   sendMessageLength(socketFD, message, buffer, plaintextLength);
   sendMessage(socketFD, message, buffer);
   sendKeyLength(socketFD, key, buffer, keySize);
