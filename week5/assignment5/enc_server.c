@@ -32,7 +32,9 @@
 int getMessageLength(int connectionSocket, char *buffer);
 int getKeyLength(int connectionSocket, char *buffer);
 void getMessageClient(int connectionSocket, char*message, char*buffer, int messageLength, char **arr, size_t *arr_len); // get message back
-int getKeyClient(int connectionSocket, char*key, char*buffer, int keyLengthRecieved);
+void getKeyClient(int connectionSocket, char*key, char*buffer, int keyLengthRecieved, char **arrKey, size_t *arr_len_key);
+void encryptMessageFunction( char*message, char*key, char*encryptedMessage);
+void sendEncodeMessage(int connectionSocket, char *arr, char *arrKey);
 void printValues(int value);
 void printMessage(char *arr, size_t arr_len);
 
@@ -42,6 +44,8 @@ void error(const char* msg){
     exit(1);
 }
 
+// CAPS Alphabet and space to use to review the plaintext file and the key for invalid character.
+static const char alph[27] = "ABCDEFGHIJKLMNOPQRSTUVWXYZ ";
 
 // To allow to reuse my port with: http://beej.us/guide/bgnet/html/
 int yes=1;
@@ -108,6 +112,10 @@ int getMessageLength(int connectionSocket, char *buffer){
 
 void getMessageClient(int connectionSocket, char*message, char*buffer, int messageLength, char **arr, size_t *arr_len){
     // Get the message from the client.
+    /* 
+        To get the message back to the main() I used a method like so to be able to return a pointer to the
+        char array: https://stackoverflow.com/questions/31060404/how-can-i-return-a-character-array-from-a-function-in-c
+    */
     int charsRead, charsSend;
 
     memset(buffer, '\0', BUFFERSIZE);
@@ -120,7 +128,6 @@ void getMessageClient(int connectionSocket, char*message, char*buffer, int messa
     // Saving the message to the message array.
     strcat(message, buffer);
     messageLength -= strlen(buffer);
-    int val = 0;
     while(messageLength != 0){
         if(strlen(buffer) == 0){
             
@@ -135,7 +142,7 @@ void getMessageClient(int connectionSocket, char*message, char*buffer, int messa
             }
             messageLength -= strlen(buffer);
             strcat(message, buffer);
-            val++;
+        
         }
     }
     // Once all the message has been read:
@@ -153,7 +160,7 @@ void getMessageClient(int connectionSocket, char*message, char*buffer, int messa
     
     *arr = messagePtr;
     *arr_len = strlen(message);
-   
+    
 }
 
 // continue here!!!
@@ -180,7 +187,7 @@ int getKeyLength(int connectionSocket, char *buffer){
 
 }
 
-int getKeyClient(int connectionSocket, char*key, char*buffer, int keyLengthRecieved){
+void getKeyClient(int connectionSocket, char*key, char*buffer, int keyLengthRecieved, char **arrKey, size_t *arr_len_key){
      // Get the message from the client.
     int charsRead, charsSend;
 
@@ -196,7 +203,7 @@ int getKeyClient(int connectionSocket, char*key, char*buffer, int keyLengthRecie
     keyLengthRecieved -= strlen(buffer);
 
     while(keyLengthRecieved != 0){
-        if(strlen(buffer)){
+        if(strlen(buffer) == 0){
             break;
         }
         memset(buffer, '\0', BUFFERSIZE);
@@ -216,7 +223,114 @@ int getKeyClient(int connectionSocket, char*key, char*buffer, int keyLengthRecie
         fprintf(stderr, "enc_server: Error sending to socket.\n");
     }
 
-    return 0;
+    char *keyPtr = malloc(sizeof(char)*BUFFERSIZE);
+    strncpy(keyPtr, key, strlen(key));
+
+    *arrKey = keyPtr;
+    *arr_len_key = strlen(key);
+}
+
+void encryptMessageFunction(char*message, char*key, char*encryptedMessage){
+    /*
+        I have to use the message and the key to encrypt it using the One-Time-Pads method:
+
+    */
+    int tokenLength;
+    int tokenValue;
+    int keyLength;
+    int keyValue;
+
+    char tempSpaceEncryptedMessage[BUFFERSIZE];
+    char *messageEncrypted;
+
+    // length of key and message
+    tokenLength =strlen(message);
+    keyLength = strlen(key);
+
+    // Allocate memory to return the encrypted message
+    // messageEncrypted = malloc(sizeof(char)*tokenLength);
+  
+
+    // saving the index:
+
+    int alphabetIndexed[tokenLength];
+    int keyIndexed[tokenLength];
+    int encryptedMessageInt[tokenLength];
+
+    // another method where I assign a value to each index of the letters
+
+    // Letter to its corresponding index for message
+    for (int i = 0; i < tokenLength; i++){
+        for(int j = 0; j < 27; j++){
+            if (message[i] == alph[j]){
+                alphabetIndexed[i] = j;
+                
+            }
+        }
+    }
+
+    // Letter to its corresponding index for key
+    for (int i = 0; i < tokenLength; i++){
+        for(int j = 0; j < 27; j++){
+            if (key[i] == alph[j]){
+                keyIndexed[i] = j;
+                
+            }
+        }
+    }
+
+    // Run the actual encryption algorithm:
+    for (int x = 0; x < tokenLength; x++){
+        encryptedMessageInt[x] = (alphabetIndexed[x] + keyIndexed[x]) % 27;
+
+    }
+
+    // Change back to alphabet letters
+    for (int ltr = 0; ltr<tokenLength; ltr++){
+        encryptedMessage[ltr] = alph[encryptedMessageInt[ltr]];
+        printf("%c", encryptedMessage[ltr]);
+    }
+
+    // Decrypting!
+    // char decryptedMessage[tokenLength];
+    // for(int k = 0; k<tokenLength; k++){
+
+    //     decryptedMessage[k] = alphabetIndexed[k] - keyIndexed[k];
+    //     if (decryptedMessage[k] < 0) {
+    //         decryptedMessage[k] +=27;
+    //     }
+
+    // }
+    // printf("Size: %d\n", sizeof(alphabetIndexed)/sizeof(alphabetIndexed[0]));
+    // strcpy(messageEncrypted, tempSpaceEncryptedMessage);
+    // printf("[decrypted: %s]\n", decryptedMessage);
+    // printf("[encrypted: %s]", encryptedMessage);
+}
+
+void sendEncodeMessage(int connectionSocket, char *arr, char *arrKey){
+    /*
+     Send the encrypted message back to the client.
+     this function will return an encrypted message in the form of an array.
+     Uses encryptMessageFunction()
+     arguments:
+     connectionSocket
+     arr: message from client
+     arrKey: key from the client
+    */ 
+    int charsRead;
+    // Pointers for char arrays for encrypted message:
+    char *arrEncrypt;
+    size_t arr_len_encrypt;
+    char encryptedMessage[strlen(arr)];
+    encryptMessageFunction(arr, arrKey, encryptedMessage);
+    charsRead = send(connectionSocket, encryptedMessage, strlen(arr), 0);
+    if (charsRead < 0){
+        fprintf(stderr, "enc_server: Error writing to socket with encrypted message.\n");
+    }
+    if (charsRead < 20){
+        printf("WARNING: not all data written to socket!\n");
+    }
+
 }
 
 
@@ -226,11 +340,6 @@ int main(int argc, char *argv[]){
     char message[BUFFERSIZE] = "";
     char key[BUFFERSIZE] = "";
     int connectionSocket, charsRead;
-
-    // Pointers for char arrays
-    char *arr;
-    size_t arr_len;
-
 
     // I'm going to have to figure out how this will change size depending on the size 
     // of the chars in the key and plaintext file.
@@ -303,24 +412,39 @@ int main(int argc, char *argv[]){
     */ 
     
     ch = fork();
+    if (ch < 0){
+        fprintf(stderr, "Error: fork()\n");
+        exit(1);
+    }
 
+    // If there are no errors with the fork() then proceed to make it.
     if (ch == 0){
+        // Pointers for char arrays for the message & key unecrypted
+        char *arr;
+        size_t arr_len;
+        char *arrKey;
+        size_t arr_len_key;
 
         int messageLength = getMessageLength(connectionSocket, buffer);
         getMessageClient(connectionSocket, message, buffer, messageLength, &arr, &arr_len);
         int keyLength = getKeyLength(connectionSocket, buffer);
-        int keyRecieved = getKeyClient(connectionSocket, key, buffer, keyLength);
-        printf("MessageLength: [%d]\n", messageLength);
-        printf("KeyLength: [%d]\n", keyLength);
-        // printMessage(arr, arr_len);
-        printf("[%s]\n", arr);
-        printf("[%d]\n", arr_len);
+        getKeyClient(connectionSocket, key, buffer, keyLength, &arrKey, &arr_len_key);
+        sendEncodeMessage(connectionSocket, arr, arrKey);
+        // printf("MessageLength: [%d]\n", messageLength);
+        // printf("KeyLength: [%d]\n", keyLength);
+        // // printMessage(arr, arr_len);
+        // printf("[%s]\n", arrKey);
+        // printf("[%d]\n", arr_len);
+
+
         close(connectionSocket);
         free(arr);
+        free(arrKey);
         exit(0);
     }
     close(connectionSocket);
     }
+    close(listenSocket);
 
     return 0;
 
