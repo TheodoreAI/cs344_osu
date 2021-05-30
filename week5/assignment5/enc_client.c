@@ -15,6 +15,7 @@ int sendMessageLength(int socketFD, char *message, char *buffer, int plaintextLe
 int sendMessage(int socketFD, char *message, char* buffer);
 int sendKeyLength(int socketFD, char *key, char*buffer, int keySize);
 int sendKey(int socketFD, char*key, char*buffer);
+int getEncodedMsgServer(int socketFD, char*buffer, int plaintextLength);
 
 // CAPS Alphabet and space to use to review the plaintext file and the key for invalid character.
 static const char alph[27] = "ABCDEFGHIJKLMNOPQRSTUVWXYZ ";
@@ -74,9 +75,9 @@ int sendMessageLength(int socketFD, char *message, char *buffer, int plaintextLe
     fprintf(stderr, "enc_client: Error writing to socket\n");
   }
 
-  if (charsWritten < strlen(message)){
-    fprintf(stderr, "Warning: not all plaintext file content passed to server. \n");
-  }
+  // if (charsWritten < strlen(message)){
+  //   printf("Warning: not all plaintext file content passed to server. \n");
+  // }
 
   // Get return message from server
   // clear array again for resure
@@ -91,7 +92,7 @@ int sendMessageLength(int socketFD, char *message, char *buffer, int plaintextLe
   if(charsRead < 0 ){
     fprintf(stderr, "enc_client: ERROR reading from socket length\n");
   }
-  printf("CLIENT: I received this from the server: \"%s\"\n", buffer);
+  // printf("CLIENT: I received this from the server: \"%s\"\n", buffer);
   return 0;
 
 }
@@ -110,9 +111,9 @@ int sendMessage(int socketFD, char *message, char *buffer){
     fprintf(stderr, "enc_client: Error writing to socket\n");
   }
 
-  if (charsWritten < strlen(message)){
-    fprintf(stderr, "Warning: not all plaintext file content passed to server. \n");
-  }
+  // if (charsWritten < strlen(message)){
+  //   printf("Warning: not all plaintext file content passed to server. \n");
+  // }
 
   // Get return message from server
   // clear array again for resure
@@ -127,7 +128,7 @@ int sendMessage(int socketFD, char *message, char *buffer){
   if(charsRead < 0 ){
     fprintf(stderr, "enc_client: ERROR reading from socket msg\n");
   }
-  printf("CLIENT: I received this from the server: \"%s\"\n", buffer);
+  // printf("CLIENT: I received this from the server: \"%s\"\n", buffer);
   return 0;
 }
 
@@ -147,9 +148,9 @@ int sendKeyLength(int socketFD, char*key, char*buffer, int keySize){
   if (charsWritten < 0){
     fprintf(stderr, "enc_client: Error writing to socket\n");
   }
-  if (charsWritten < strlen(key)){
-    fprintf(stderr, "Warning: not all plaintext file content passed to server. \n");
-  }
+  // if (charsWritten < strlen(key)){
+  //   printf("Warning: not all plaintext file content passed to server. \n");
+  // }
     // clear array again for resure
   memset(buffer, '\0', BUFFERSIZE);
     charsRead = recv(socketFD, buffer, BUFFERSIZE, 0);
@@ -172,9 +173,9 @@ int sendKey(int socketFD, char*key, char*buffer){
     fprintf(stderr, "enc_client: Error writing to socket\n");
   }
 
-  if (charsWritten < strlen(key)){
-    fprintf(stderr, "Warning: not all plaintext file content passed to server. \n");
-  }
+  // if (charsWritten < strlen(key)){
+  //   printf("Warning: not all plaintext file content passed to server. \n");
+  // }
 
   // Get return message from server
   // clear array again for resure
@@ -189,9 +190,56 @@ int sendKey(int socketFD, char*key, char*buffer){
   if(charsRead < 0 ){
     fprintf(stderr, "enc_client: ERROR reading from socket msg\n");
   }
-  printf("CLIENT: I received this from the server: \"%s\"\n", buffer);
+  // printf("CLIENT: I received this from the server: \"%s\"\n", buffer);
   return 0;
 }
+
+int getEncodedMsgServer(int socketFD, char*buffer, int messageLength){
+    /*
+      This function is used to retrive the encrypted message from the enc_server.
+      Should the message should be able to be outputted to a file?
+      messageLength: the length of the message originally sent, should stay the same as the 
+      length of the encrypted message.
+    */
+  int charsRead, charsSend;
+  char encMessage[BUFFERSIZE]="";
+
+  memset(buffer, '\0', BUFFERSIZE); // clear buffer
+  charsRead = recv(socketFD, buffer, BUFFERSIZE, 0); // place message in buffer
+  
+  if(charsRead < 0){
+    fprintf(stderr, "Error reading from the socket");
+  }
+  strcat(encMessage, buffer); // save the message in encMessage
+  messageLength -= strlen(buffer); // decrement messageLength until 0
+  while(messageLength != 0){
+    if(strlen(buffer) == 0){
+      break;
+    }else{
+            memset(buffer, '\0', BUFFERSIZE); // clear buffer again
+            charsRead = recv(socketFD, buffer, BUFFERSIZE, 0); // save in buffer again
+            if(charsRead < 0){
+                fprintf(stderr, "Error reading from the socket");
+            }
+            messageLength -= strlen(buffer); // decrement
+            strcat(encMessage, buffer); // save and repeat
+        }
+    }
+    // printf("encryption: [%s]\n", encMessage);
+
+    
+    // Once all the message has been read:
+    // char recievedAllMessage[31] = "I got all the encrypted message";
+    // charsRead = send(socketFD, recievedAllMessage, strlen(recievedAllMessage), 0);
+    // if(charsRead < 0){
+    //     fprintf(stderr, "enc_server: Error sending to socket.\n");
+    // }
+    fprintf(stdout, encMessage);
+    
+  return 0;
+}
+
+
 
 
 int main(int argc, char*argv[]){
@@ -233,14 +281,13 @@ int main(int argc, char*argv[]){
   
   setupAddressStruct(&serverAddress, atoi(argv[3]));
 
-   /*
+/*
    Connect to server: STEP 3: Calls the function connect to connect the client socket to the server socket. After this
     It should be ready for reading and writing.
     socketFD:
     serverAddress:
     sizeof(serverAddress):
 */
-
 
   if(connect(socketFD, (struct sockaddr*)&serverAddress, sizeof(serverAddress)) < 0){
     fprintf(stderr, "enc_client: Error connecting\n");
@@ -315,11 +362,11 @@ int main(int argc, char*argv[]){
   sendMessage(socketFD, message, buffer);
   sendKeyLength(socketFD, key, buffer, keySize);
   sendKey(socketFD, key, buffer);
+  // Remember that the size of the message and the size of the encrypted message will be the same so you can use this.
+  getEncodedMsgServer(socketFD, buffer, plaintextLength); 
   close(socketFD);
 
-
  return 0;
-
 }
 
 
