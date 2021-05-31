@@ -12,23 +12,10 @@
 
 /*
     This file will be used to build the encryption server. 
-    It will use the following steps to build a server with the following call systems:
-    bind()
-    listen()
-    accept()
-    recv()
-    send()
-    close()
-
-    Running: 
-    ./enc_server listening_port
 */
 
-// Make a global variable
 #define BUFFERSIZE (int)100000
-
-// Make a special string message:
-static char ENCSERVER[10] = "ENC_SERVER";
+static char DECSERVER[10] = "DEC_SERVER";
 
 
 // Function Prototypes:
@@ -74,21 +61,19 @@ void checkClientConnection(int connectionSocket, char *buffer){
     // Recover the length of the incoming message
     memset(buffer, '\0', BUFFERSIZE);
     charsRead = recv(connectionSocket, buffer, 10, 0);
-    printf("[%s][%s]", buffer, ENCSERVER);
-    if(strcmp(buffer, ENCSERVER) != 0){
+
+    if (strlen(buffer) == 0){
+        printf("Buffer is zero");
+    }
+    else if(strcmp(buffer, DECSERVER) != 0){
         fprintf(stderr, "error that dec_client cannot use enc_server");
         exit(1);
-    }else{
-        printf("Correct connection");
     }
-   
-   
-    // say that you got the length of the message
-    // charsSend = send(connectionSocket, "Connected to dec_server!", 24, 0);
-    // if(charsSend< 0){
-    //     fprintf(stderr, "Error writing to the socket\n");
-    // }
-  
+    // Say that you got the length of the message
+    charsSend = send(connectionSocket, "Connected to dec_server!", 24, 0);
+    if(charsSend< 0){
+        fprintf(stderr, "Error writing to the socket\n");
+    }
    
 }
 int getMessageLength(int connectionSocket, char *buffer){
@@ -117,7 +102,6 @@ int getMessageLength(int connectionSocket, char *buffer){
 
 
 void getMessageClient(int connectionSocket, char*message, char*buffer, int messageLength, char **arr, size_t *arr_len){
-    // Get the message from the client.
     /* 
         To get the message back to the main() I used a method like so to be able to return a pointer to the
         char array: https://stackoverflow.com/questions/31060404/how-can-i-return-a-character-array-from-a-function-in-c
@@ -160,16 +144,13 @@ void getMessageClient(int connectionSocket, char*message, char*buffer, int messa
         fprintf(stderr, "enc_server: Error sending to socket.\n");
     }
     char *messagePtr = malloc(sizeof(char)*BUFFERSIZE);
-    // printf("message: [%d]\n", strlen(message));
+
     strncpy(messagePtr, message, strlen(message));
     // Making a pointer to return it
-    
     *arr = messagePtr;
     *arr_len = strlen(message);
     
 }
-
-// continue here!!!
 
 
 int getKeyLength(int connectionSocket, char *buffer){
@@ -204,7 +185,10 @@ void getKeyClient(int connectionSocket, char*key, char*buffer, int keyLengthReci
         fprintf(stderr, "Error reading from the socket");
     }
 
-    // Saving the message to the message array.
+    /*
+        Saving the message to the message array. 
+        While making sure that we get the entire key from the client.
+    */
     strcat(key, buffer);
     keyLengthRecieved -= strlen(buffer);
 
@@ -231,7 +215,7 @@ void getKeyClient(int connectionSocket, char*key, char*buffer, int keyLengthReci
 
     char *keyPtr = malloc(sizeof(char)*BUFFERSIZE);
     strncpy(keyPtr, key, strlen(key));
-
+    // Pointers to return the array with key and its length to the main()
     *arrKey = keyPtr;
     *arr_len_key = strlen(key);
 }
@@ -239,7 +223,6 @@ void getKeyClient(int connectionSocket, char*key, char*buffer, int keyLengthReci
 void encryptMessageFunction(char*message, char*key, char*decryptedMessage){
     /*
         I have to use the message and the key to encrypt it using the One-Time-Pads method:
-
     */
     int tokenLength;
     int tokenValue;
@@ -249,12 +232,7 @@ void encryptMessageFunction(char*message, char*key, char*decryptedMessage){
     // length of key and message
     tokenLength =strlen(message);
     keyLength = strlen(key);
-
-    // Allocate memory to return the encrypted message
-    // messageEncrypted = malloc(sizeof(char)*tokenLength);
-
     // saving the index:
-
     int alphabetIndexed[tokenLength];
     int keyIndexed[tokenLength];
     int decryptedMessageInt[tokenLength];
@@ -281,16 +259,6 @@ void encryptMessageFunction(char*message, char*key, char*decryptedMessage){
         }
     }
 
-    // Run the actual encryption algorithm:
-    // for (int x = 0; x < tokenLength; x++){
-    //     decryptedMessageInt[x] = (alphabetIndexed[x] + keyIndexed[x]) % 27;
-
-    // }
-    
-
-    // encryptedMessage[strcspn(encryptedMessage, "\0")] = '\n';
-    // printf("%s", encryptedMessage);
-
     // Decrypting!
     for(int k = 0; k<tokenLength; k++){
 
@@ -299,28 +267,18 @@ void encryptMessageFunction(char*message, char*key, char*decryptedMessage){
 
 
     }
-
        // Change back to alphabet letters
     for (int ltr = 0; ltr<tokenLength; ltr++){
         decryptedMessage[ltr] = alph[decryptedMessageInt[ltr]];
-        printf("%c", decryptedMessage[ltr]);
+        // printf("%c", decryptedMessage[ltr]);
         
     }
-    // printf("Size: %d\n", sizeof(alphabetIndexed)/sizeof(alphabetIndexed[0]));
-    // strcpy(messageEncrypted, tempSpaceEncryptedMessage);
-    // printf("[decrypted: %s]\n", decryptedMessage);
-    // printf("[encrypted: %s]", encryptedMessage);
 }
 
 void sendEncodeMessage(int connectionSocket, char *arr, char *arrKey){
     /*
      Send the encrypted message back to the client.
      this function will return an encrypted message in the form of an array.
-     Uses encryptMessageFunction()
-     arguments:
-     connectionSocket
-     arr: message from client
-     arrKey: key from the client
     */ 
     int charsRead;
     // Pointers for char arrays for encrypted message:
@@ -340,14 +298,13 @@ void sendEncodeMessage(int connectionSocket, char *arr, char *arrKey){
 
 
 int main(int argc, char *argv[]){
+    // Where everything stems, calls all the functions to perform the 
+    // connections and to talk to client.
     int ch = 0;
     char buffer[BUFFERSIZE] = "";
     char message[BUFFERSIZE] = "";
     char key[BUFFERSIZE] = "";
     int connectionSocket, charsRead;
-
-    // I'm going to have to figure out how this will change size depending on the size 
-    // of the chars in the key and plaintext file.
     struct sockaddr_in serverAddress, clientAddress;
     socklen_t sizeOfClientInfo = sizeof(clientAddress);
 

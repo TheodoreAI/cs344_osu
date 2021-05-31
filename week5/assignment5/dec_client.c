@@ -6,7 +6,7 @@
 #include <sys/socket.h> // send(),recv()
 #include <netdb.h>      // gethostbyname()
 
-// Global variables
+
 #define BUFFERSIZE (int)100000
 
 // Function prototypes
@@ -22,12 +22,8 @@ int getEncodedMsgServer(int socketFD, char*buffer, int plaintextLength);
 static const char alph[27] = "ABCDEFGHIJKLMNOPQRSTUVWXYZ ";
 
 /**
-* enc_client code
-* 1. Create a socket and connect to the server specified in the command arugments.
-* 2. Prompt the user for input and send that input as a message to the server.
-* 3. Print the message received from the server and exit the program.
+* dec_client code: same as enc_client but can only speak with dec_server
 */
-
 
 // Error function used for reporting issues.
 void error(const char *msg){
@@ -46,7 +42,6 @@ void setupAddressStruct(struct sockaddr_in *address, int portNumber){
   address->sin_port = htons(portNumber);
 
   // Get the DNS entry for this hostname
-    
   struct hostent *hostInfo = gethostbyname("localhost");
   if (hostInfo == NULL){
     fprintf(stderr, "enc_client: ERROR, no such host\n");
@@ -60,19 +55,19 @@ void setupAddressStruct(struct sockaddr_in *address, int portNumber){
 }
 
 
-
 void establishDecServerConnection(int socketFD){
+  // Makes sure that its the right connection else ends it.
   int charsWritten, charsRead;
   char buffer[BUFFERSIZE]= "";
-  char encserver[10]= "ENC_SERVER";
+  char encserver[10]= "DEC_SERVER";
   charsWritten = send(socketFD, encserver, strlen(encserver), 0);
-  // if (charsWritten < 0){
-  //   fprintf(stderr, "Error writing to socket connection");
-  // }
-  // charsRead = recv(socketFD, buffer, BUFFERSIZE, 0);
-  // if(charsRead < 0 ){
-  //   fprintf(stderr, "enc_client: ERROR reading from socket length\n");
-  // }
+  if (charsWritten < 0){
+    fprintf(stderr, "Error writing to socket connection");
+  }
+  charsRead = recv(socketFD, buffer, BUFFERSIZE, 0);
+  if(strcmp(buffer, "Connected to dec_server!") != 0 ){
+    fprintf(stderr, "Wrong server.\n");
+  }
 
 }
 
@@ -99,7 +94,6 @@ int sendMessageLength(int socketFD, char *message, char *buffer, int plaintextLe
   // }
 
   // Get return message from server
-  // clear array again for resure
   memset(buffer, '\0', BUFFERSIZE);
    /*
     The client recieves data from the server socket through the recv() function.
@@ -244,8 +238,6 @@ int getEncodedMsgServer(int socketFD, char*buffer, int messageLength){
             strcat(encMessage, buffer); // save and repeat
         }
     }
-    // printf("encryption: [%s]\n", encMessage);
-
     
     // Once all the message has been read:
     // char recievedAllMessage[31] = "I got all the encrypted message";
@@ -272,8 +264,6 @@ int main(int argc, char*argv[]){
   char message[BUFFERSIZE] = "";
   char key[BUFFERSIZE] = "";
 
-
-
   // Check the usage & arguments
   if(argc < 3){
     fprintf(stderr, "USAGE: %s filename key port", argv[0]);
@@ -290,25 +280,16 @@ int main(int argc, char*argv[]){
 
   /*
     STEP 2: sets up a socket address structure sockaddr_in with
-    arg        -> address
-    argv[1] -> filename:
-    argv[2] -> keyfile:
-    argv[3] -> portNumber;
-    optional -> filename output (stdout)
   */
   setupAddressStruct(&serverAddress, atoi(argv[3]));
 
 /*
    Connect to server: STEP 3: Calls the function connect to connect the client socket to the server socket. After this
     It should be ready for reading and writing.
-    socketFD:
-    serverAddress:
-    sizeof(serverAddress):
 */
   if(connect(socketFD, (struct sockaddr*)&serverAddress, sizeof(serverAddress)) < 0){
     fprintf(stderr, "enc_client: Error connecting\n");
   }
-
 
   // Open the file passed as an argument
   filename = fopen(argv[1], "r");
@@ -348,7 +329,6 @@ int main(int argc, char*argv[]){
      Making sure that key and message only have capital letters from alphabet and the space.
      Valid characters only.
   */
-
   for (int i = 0;  i< plaintextLength; i++){
     for(int j = 0; j < 28; j++){
       if (j == 27){

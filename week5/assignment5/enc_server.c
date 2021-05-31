@@ -27,8 +27,10 @@
 // Make a global variable
 // static const int BUFFERSIZE = 10000;
 #define BUFFERSIZE (int)100000
+static char ENCSERVER[10] = "ENC_SERVER";
 // Function Prototypes:
 
+void checkClientConnection(int connectionSocket, char*buffer);
 int getMessageLength(int connectionSocket, char *buffer);
 int getKeyLength(int connectionSocket, char *buffer);
 void getMessageClient(int connectionSocket, char*message, char*buffer, int messageLength, char **arr, size_t *arr_len); // get message back
@@ -57,18 +59,7 @@ int yes=1;
 //     exit(1);
 // } 
 
-void printValues(int value){
-    printf("[%d]", value);
-}
 
-
-void printMessage(char *arr, size_t arr_len){
-
-    for(int i = 0; i< arr_len; i++){
-        printf("%c", arr[i]);
-    }
-    
-}
 // This function will set up the address struct for the server socket
 void setupAddressStruct(struct sockaddr_in* address, int portNumber){
 
@@ -82,6 +73,31 @@ void setupAddressStruct(struct sockaddr_in* address, int portNumber){
     // Allow enc_client address to connect to this server. 
     address->sin_addr.s_addr = INADDR_ANY;
 
+}
+
+
+void checkClientConnection(int connectionSocket, char *buffer){
+    // Checks to see if dec_client is talking to it:
+    int charsRead, charsSend;
+    int messageLength;
+
+    // Recover the length of the incoming message
+    memset(buffer, '\0', BUFFERSIZE);
+    charsRead = recv(connectionSocket, buffer, 10, 0);
+    if (strlen(buffer) == 0){
+        printf("Length of buffer is zero");
+    }
+    else if(strcmp(buffer, ENCSERVER) != 0){
+        fprintf(stderr, "error that dec_client cannot use enc_server\n");
+        exit(1);
+    }
+    // Say that you got the length of the message
+    charsSend = send(connectionSocket, "Connected to dec_server!", 24, 0);
+    if(charsSend< 0){
+        fprintf(stderr, "Error writing to the socket\n");
+    }
+    
+   
 }
 
 
@@ -288,27 +304,8 @@ void encryptMessageFunction(char*message, char*key, char*encryptedMessage){
     // Change back to alphabet letters
     for (int ltr = 0; ltr<tokenLength; ltr++){
         encryptedMessage[ltr] = alph[encryptedMessageInt[ltr]];
-        printf("%c", encryptedMessage[ltr]);
         
     }
-
-    // Attach a \n at the end
-    // encryptedMessage[strcspn(encryptedMessage, "\0")] = '\n';
-    printf("%s", encryptedMessage);
-    // Decrypting!
-    // char decryptedMessage[tokenLength];
-    // for(int k = 0; k<tokenLength; k++){
-
-    //     decryptedMessage[k] = alphabetIndexed[k] - keyIndexed[k];
-    //     if (decryptedMessage[k] < 0) {
-    //         decryptedMessage[k] +=27;
-    //     }
-
-    // }
-    // printf("Size: %d\n", sizeof(alphabetIndexed)/sizeof(alphabetIndexed[0]));
-    // strcpy(messageEncrypted, tempSpaceEncryptedMessage);
-    // printf("[decrypted: %s]\n", decryptedMessage);
-    // printf("[encrypted: %s]", encryptedMessage);
 }
 
 void sendEncodeMessage(int connectionSocket, char *arr, char *arrKey){
@@ -428,19 +425,13 @@ int main(int argc, char *argv[]){
         size_t arr_len;
         char *arrKey;
         size_t arr_len_key;
-
+        checkClientConnection(connectionSocket, buffer);
         int messageLength = getMessageLength(connectionSocket, buffer);
         getMessageClient(connectionSocket, message, buffer, messageLength, &arr, &arr_len);
         int keyLength = getKeyLength(connectionSocket, buffer);
         getKeyClient(connectionSocket, key, buffer, keyLength, &arrKey, &arr_len_key);
         sendEncodeMessage(connectionSocket, arr, arrKey);
-        // printf("MessageLength: [%d]\n", messageLength);
-        // printf("KeyLength: [%d]\n", keyLength);
-        // // printMessage(arr, arr_len);
-        // printf("[%s]\n", arrKey);
-        // printf("[%d]\n", arr_len);
-
-
+      
         close(connectionSocket);
         free(arr);
         free(arrKey);
