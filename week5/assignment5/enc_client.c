@@ -11,6 +11,7 @@
 
 // Function prototypes
 void setupAddressStruct(struct sockaddr_in *address, int portNumber);
+void establishEncServerConnection(int socketFD);
 int sendMessageLength(int socketFD, char *message, char *buffer, int plaintextLength);
 int sendMessage(int socketFD, char *message, char* buffer);
 int sendKeyLength(int socketFD, char *key, char*buffer, int keySize);
@@ -57,6 +58,25 @@ void setupAddressStruct(struct sockaddr_in *address, int portNumber){
                   hostInfo->h_addr_list[0], 
                   hostInfo->h_length);
 }
+
+
+void establishEncServerConnection(int socketFD){
+  // Makes sure that its the right connection else ends it.
+  int charsWritten, charsRead;
+  char buffer[BUFFERSIZE]= "";
+  char encserver[10]= "ENC_SERVER";
+  charsWritten = send(socketFD, encserver, strlen(encserver), 0);
+  if (charsWritten < 0){
+    fprintf(stderr, "Error writing to socket connection");
+  }
+  charsRead = recv(socketFD, buffer, BUFFERSIZE, 0);
+  if(strcmp(buffer, "Connected to dec_server!") != 0 ){
+    fprintf(stderr, "Wrong server.");
+  }
+
+}
+
+
 
 
 int sendMessageLength(int socketFD, char *message, char *buffer, int plaintextLength){
@@ -292,7 +312,7 @@ int main(int argc, char*argv[]){
 */
 
   if(connect(socketFD, (struct sockaddr*)&serverAddress, sizeof(serverAddress)) < 0){
-    fprintf(stderr, "enc_client: Error connecting\n");
+    fprintf(stderr, "enc_client: Error connecting !!\n");
   }
 
 
@@ -359,7 +379,7 @@ int main(int argc, char*argv[]){
       }
     }
   }
-
+  establishEncServerConnection(socketFD);
   sendMessageLength(socketFD, message, buffer, plaintextLength);
   sendMessage(socketFD, message, buffer);
   sendKeyLength(socketFD, key, buffer, keySize);
