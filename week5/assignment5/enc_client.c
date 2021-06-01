@@ -9,6 +9,7 @@
 // Global variables
 #define BUFFERSIZE (int)100000
 
+
 // Function prototypes
 void setupAddressStruct(struct sockaddr_in *address, int portNumber);
 void establishEncServerConnection(int socketFD);
@@ -50,6 +51,7 @@ void setupAddressStruct(struct sockaddr_in *address, int portNumber){
   struct hostent *hostInfo = gethostbyname("localhost");
   if (hostInfo == NULL){
     fprintf(stderr, "enc_client: ERROR, no such host\n");
+    fflush(stderr);
     exit(0);
   }
 
@@ -67,11 +69,13 @@ void establishEncServerConnection(int socketFD){
   char encserver[10]= "ENC_SERVER";
   charsWritten = send(socketFD, encserver, strlen(encserver), 0);
   if (charsWritten < 0){
-    fprintf(stderr, "Error writing to socket connection");
+    printf("Error writing to socket connection");
+    
   }
   charsRead = recv(socketFD, buffer, BUFFERSIZE, 0);
   if(strcmp(buffer, "Connected to dec_server!") != 0 ){
-    fprintf(stderr, "Wrong server.");
+    printf("wrong server");
+    
   }
 
 }
@@ -93,6 +97,7 @@ int sendMessageLength(int socketFD, char *message, char *buffer, int plaintextLe
 
   if (charsWritten < strlen(strLength)){
     fprintf(stderr, "enc_client: Error writing to socket\n");
+    fflush(stderr);
   }
 
   // if (charsWritten < strlen(message)){
@@ -111,6 +116,7 @@ int sendMessageLength(int socketFD, char *message, char *buffer, int plaintextLe
   charsRead = recv(socketFD, buffer, BUFFERSIZE, 0);
   if(charsRead < 0 ){
     fprintf(stderr, "enc_client: ERROR reading from socket length\n");
+    fflush(stderr);
   }
   // printf("CLIENT: I received this from the server: \"%s\"\n", buffer);
   return 0;
@@ -129,6 +135,7 @@ int sendMessage(int socketFD, char *message, char *buffer){
 
   if (charsWritten < 0){
     fprintf(stderr, "enc_client: Error writing to socket\n");
+    fflush(stderr);
   }
 
   // if (charsWritten < strlen(message)){
@@ -147,8 +154,8 @@ int sendMessage(int socketFD, char *message, char *buffer){
   charsRead = recv(socketFD, buffer, BUFFERSIZE, 0);
   if(charsRead < 0 ){
     fprintf(stderr, "enc_client: ERROR reading from socket msg\n");
+    fflush(stderr);
   }
-  // printf("CLIENT: I received this from the server: \"%s\"\n", buffer);
   return 0;
 }
 
@@ -167,6 +174,7 @@ int sendKeyLength(int socketFD, char*key, char*buffer, int keySize){
   charsWritten = send(socketFD, keyLength, strlen(keyLength), 0); // Send keylength
   if (charsWritten < 0){
     fprintf(stderr, "enc_client: Error writing to socket\n");
+    fflush(stderr);
   }
   // if (charsWritten < strlen(key)){
   //   printf("Warning: not all plaintext file content passed to server. \n");
@@ -177,6 +185,7 @@ int sendKeyLength(int socketFD, char*key, char*buffer, int keySize){
 
   if(charsRead < 0 ){
     fprintf(stderr, "enc_client: ERROR reading from socket\n");
+    fflush(stderr);
   }
 }
 
@@ -191,6 +200,7 @@ int sendKey(int socketFD, char*key, char*buffer){
 
   if (charsWritten < 0){
     fprintf(stderr, "enc_client: Error writing to socket\n");
+    fflush(stderr);
   }
 
   // if (charsWritten < strlen(key)){
@@ -209,6 +219,7 @@ int sendKey(int socketFD, char*key, char*buffer){
   charsRead = recv(socketFD, buffer, BUFFERSIZE, 0);
   if(charsRead < 0 ){
     fprintf(stderr, "enc_client: ERROR reading from socket msg\n");
+    fflush(stderr);
   }
   // printf("CLIENT: I received this from the server: \"%s\"\n", buffer);
   return 0;
@@ -229,6 +240,7 @@ int getEncodedMsgServer(int socketFD, char*buffer, int messageLength){
   
   if(charsRead < 0){
     fprintf(stderr, "Error reading from the socket");
+    fflush(stderr);
   }
   strcat(encMessage, buffer); // save the message in encMessage
   messageLength -= strlen(buffer); // decrement messageLength until 0
@@ -240,24 +252,18 @@ int getEncodedMsgServer(int socketFD, char*buffer, int messageLength){
             charsRead = recv(socketFD, buffer, BUFFERSIZE, 0); // save in buffer again
             if(charsRead < 0){
                 fprintf(stderr, "Error reading from the socket");
+                fflush(stderr);
             }
             messageLength -= strlen(buffer); // decrement
             strcat(encMessage, buffer); // save and repeat
         }
     }
-    // printf("encryption: [%s]\n", encMessage);
-
     
-    // Once all the message has been read:
-    // char recievedAllMessage[31] = "I got all the encrypted message";
-    // charsRead = send(socketFD, recievedAllMessage, strlen(recievedAllMessage), 0);
-    // if(charsRead < 0){
-    //     fprintf(stderr, "enc_server: Error sending to socket.\n");
-    // }
+
     // Attach a \n at the end
     encMessage[strcspn(encMessage, "\0")] = '\n';
-    fprintf(stdout, encMessage);
-    
+    fputs(encMessage, stdout);
+
   return 0;
 }
 
@@ -313,6 +319,7 @@ int main(int argc, char*argv[]){
 
   if(connect(socketFD, (struct sockaddr*)&serverAddress, sizeof(serverAddress)) < 0){
     fprintf(stderr, "enc_client: Error connecting !!\n");
+    fflush(stderr);
   }
 
 
@@ -321,6 +328,7 @@ int main(int argc, char*argv[]){
 
   if (filename == NULL){
     fprintf(stderr, "Error opening filename\n");
+    fflush(stderr);
   }
   // Get the content from the file and place it on messge to be send()' to the enc_server.
   fgets(message, BUFFERSIZE, filename);
@@ -332,6 +340,7 @@ int main(int argc, char*argv[]){
 
   if (keyfile == NULL){
     fprintf(stderr, "Error with keyfile\n");
+    fflush(stderr);
 
   }
 
@@ -347,6 +356,7 @@ int main(int argc, char*argv[]){
   // Key and message review 1: making sure that the key is as long or longer than message.
   if(keySize < plaintextLength){
     fprintf(stderr, "ERROR: key is shorter than the plaintext.\n key: [%d] \n plaintext: [%d]\n", keySize, plaintextLength);
+    fflush(stderr);
     exit(1);
   } 
 
@@ -360,6 +370,7 @@ int main(int argc, char*argv[]){
       if (j == 27){
         fprintf(stderr, "Error: plaintext file has an invalid character.\n");
         exit(1);
+        fflush(stderr);
       }
       if(message[i] == alph[j]){
         break;
@@ -372,6 +383,7 @@ int main(int argc, char*argv[]){
     for(int j = 0; j < 28; j++){
       if (j == 27){
         fprintf(stderr, "Error: key file has an invalid character.\n");
+        fflush(stderr);
         exit(1);
       }
       if(key[i] == alph[j]){
@@ -387,6 +399,7 @@ int main(int argc, char*argv[]){
   // Remember that the size of the message and the size of the encrypted message will be the same so you can use this.
   getEncodedMsgServer(socketFD, buffer, plaintextLength); 
   close(socketFD);
+
 
  return 0;
 }

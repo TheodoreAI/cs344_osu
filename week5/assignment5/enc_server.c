@@ -13,19 +13,11 @@
 /*
     This file will be used to build the encryption server. 
     It will use the following steps to build a server with the following call systems:
-    bind()
-    listen()
-    accept()
-    recv()
-    send()
-    close()
-
-    Running: 
-    ./enc_server listening_port
 */
 
-// Make a global variable
-// static const int BUFFERSIZE = 10000;
+
+
+
 #define BUFFERSIZE (int)100000
 static char ENCSERVER[10] = "ENC_SERVER";
 // Function Prototypes:
@@ -84,17 +76,14 @@ void checkClientConnection(int connectionSocket, char *buffer){
     // Recover the length of the incoming message
     memset(buffer, '\0', BUFFERSIZE);
     charsRead = recv(connectionSocket, buffer, 10, 0);
-    if (strlen(buffer) == 0){
-        printf("Length of buffer is zero");
-    }
-    else if(strcmp(buffer, ENCSERVER) != 0){
-        fprintf(stderr, "error that dec_client cannot use enc_server\n");
-        exit(1);
+  
+    if(strcmp(buffer, ENCSERVER) != 0){
+        printf("error that dec_client cannot use enc_server\n");
     }
     // Say that you got the length of the message
     charsSend = send(connectionSocket, "Connected to dec_server!", 24, 0);
     if(charsSend< 0){
-        fprintf(stderr, "Error writing to the socket\n");
+        printf("Error writing to the socket\n");
     }
     
    
@@ -328,14 +317,13 @@ void sendEncodeMessage(int connectionSocket, char *arr, char *arrKey){
     if (charsRead < 0){
         fprintf(stderr, "enc_server: Error writing to socket with encrypted message.\n");
     }
-    if (charsRead < 20){
-        printf("WARNING: not all data written to socket!\n");
-    }
 
 }
 
 
 int main(int argc, char *argv[]){
+
+    
     int ch = 0;
     char buffer[BUFFERSIZE] = "";
     char message[BUFFERSIZE] = "";
@@ -415,6 +403,7 @@ int main(int argc, char *argv[]){
     ch = fork();
     if (ch < 0){
         fprintf(stderr, "Error: fork()\n");
+        fflush(stderr);
         exit(1);
     }
 
@@ -437,7 +426,6 @@ int main(int argc, char *argv[]){
         free(arrKey);
         exit(0);
     }
-    close(connectionSocket);
     }
     close(listenSocket);
 

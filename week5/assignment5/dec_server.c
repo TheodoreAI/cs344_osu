@@ -61,19 +61,20 @@ void checkClientConnection(int connectionSocket, char *buffer){
     // Recover the length of the incoming message
     memset(buffer, '\0', BUFFERSIZE);
     charsRead = recv(connectionSocket, buffer, 10, 0);
-
-    if (strlen(buffer) == 0){
-        printf("Buffer is zero");
-    }
-    else if(strcmp(buffer, DECSERVER) != 0){
+    if(strcmp(buffer, DECSERVER) != 0){
         fprintf(stderr, "error that dec_client cannot use enc_server");
+        fflush(stderr);
         exit(1);
     }
     // Say that you got the length of the message
     charsSend = send(connectionSocket, "Connected to dec_server!", 24, 0);
     if(charsSend< 0){
         fprintf(stderr, "Error writing to the socket\n");
+        fflush(stderr);
     }
+    
+   
+    
    
 }
 int getMessageLength(int connectionSocket, char *buffer){
@@ -94,6 +95,7 @@ int getMessageLength(int connectionSocket, char *buffer){
     charsSend = send(connectionSocket, "Connected to enc_server!", 24, 0);
     if(charsSend< 0){
         fprintf(stderr, "Error writing to the socket\n");
+
     }
    
     return messageLength;
@@ -270,7 +272,6 @@ void encryptMessageFunction(char*message, char*key, char*decryptedMessage){
        // Change back to alphabet letters
     for (int ltr = 0; ltr<tokenLength; ltr++){
         decryptedMessage[ltr] = alph[decryptedMessageInt[ltr]];
-        // printf("%c", decryptedMessage[ltr]);
         
     }
 }
@@ -290,9 +291,7 @@ void sendEncodeMessage(int connectionSocket, char *arr, char *arrKey){
     if (charsRead < 0){
         fprintf(stderr, "enc_server: Error writing to socket with encrypted message.\n");
     }
-    if (charsRead < 20){
-        printf("WARNING: not all data written to socket!\n");
-    }
+    
 
 }
 
@@ -312,6 +311,7 @@ int main(int argc, char *argv[]){
 
     if (argc < 2){
         fprintf(stderr, "USAGE: %s ./enc_server PORT\n", argv[1]);
+        fflush(stderr);
         exit(1);
     }
 
@@ -363,6 +363,7 @@ int main(int argc, char *argv[]){
     connectionSocket = accept(listenSocket, (struct sockaddr *)&clientAddress, &sizeOfClientInfo);
     if (connectionSocket < 0){
           fprintf(stderr, "Error on accepting the connection between this client and server.");
+          fflush(stderr);
           exit(1);
     }
     /* 
@@ -376,6 +377,7 @@ int main(int argc, char *argv[]){
     ch = fork();
     if (ch < 0){
         fprintf(stderr, "Error: fork()\n");
+        fflush(stderr);
         exit(1);
     }
 
@@ -398,7 +400,6 @@ int main(int argc, char *argv[]){
         free(arrKey);
         exit(0);
     }
-    close(connectionSocket);
     }
     close(listenSocket);
 

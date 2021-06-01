@@ -239,15 +239,13 @@ int getEncodedMsgServer(int socketFD, char*buffer, int messageLength){
         }
     }
     
-    // Once all the message has been read:
-    // char recievedAllMessage[31] = "I got all the encrypted message";
-    // charsRead = send(socketFD, recievedAllMessage, strlen(recievedAllMessage), 0);
-    // if(charsRead < 0){
-    //     fprintf(stderr, "enc_server: Error sending to socket.\n");
-    // }
+    if(charsRead < 0){
+        fprintf(stderr, "enc_server: Error sending to socket.\n");
+    }
     // Attach a \n at the end
     encMessage[strcspn(encMessage, "\0")] = '\n';
-    fprintf(stdout, encMessage);
+    fputs(encMessage, stdout);
+    
     
   return 0;
 }
